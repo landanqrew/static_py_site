@@ -23,8 +23,8 @@ class TestTextNode(unittest.TestCase):
         self.assertTrue("https", node.url[:5])
     
     def test_is_insecure_url(self):
-        node = TextNode("This is a text node", TextType.LINK, "https://www.google.com")
-        self.assertTrue("https", self.url[:5])
+        node = TextNode("This is a text node", TextType.LINK, "http://www.google.com")
+        self.assertTrue("http:", node.url[:5])
 
     def test_is_valid_code(self):
         node = TextNode("```print('This is a text node')```", TextType.CODE)
