@@ -12,16 +12,33 @@ class HtmlNode:
         raise NotImplementedError()
     
     def props_to_html(self):
-        return " ".join([f'{key}="{value}"' for key, value in self.props.items()])
+        if not self.props:
+            return ""
+        return " " + " ".join([f'{key}="{value}"' for key, value in self.props.items()])
     
     def __repr__(self) -> str:
         if not self.tag:
             return self.value
         
         if self.children:
-            return f"<{self.tag} {self.props_to_html()}>" + "\n  " + "\n  ".join([str(child.__repr__()) for child in self.children]) + "\n" +  f"</{self.tag}>"
+            return f"<{self.tag}{self.props_to_html()}>" + "\n  " + "\n  ".join([str(child.__repr__()) for child in self.children]) + "\n" +  f"</{self.tag}>"
         else:
-            return f"<{self.tag} {self.props_to_html()}> {self.value} </{self.tag}>"
+            return f"<{self.tag}{self.props_to_html()}> {self.value} </{self.tag}>"
+        
+
+class LeafNode(HtmlNode):
+    def __init__(self, tag: str | None, value: str, props: dict = None):
+        super().__init__(tag, value, None, props)
+        if not self.value:
+            raise ValueError("cannot instantiate leaf node without value")
+        
+    def to_html(self):
+        if not self.tag:
+            return self.value
+        else:
+            return f"<{self.tag}{self.props_to_html()}>{self.value}</{self.tag}>"
+
+    
 
     
 
