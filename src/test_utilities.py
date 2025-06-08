@@ -1,6 +1,6 @@
 import unittest
 import json
-from utilities import text_node_to_html_node, split_nodes_delimiter
+from utilities import text_node_to_html_node, split_nodes_delimiter, extract_markdown_images, extract_markdown_links
 from htmlnode import HtmlNode, ParentNode, LeafNode
 from textnode import TextNode, TextType
 
@@ -76,7 +76,7 @@ class TestUtilities(unittest.TestCase):
 
         ### ITALICS ###
         new_nodes = split_nodes_delimiter(text_nodes[2:3], "_", TextType.ITALIC)
-        type_map: dict = {}
+        type_map = {}
         for node in new_nodes:
             type_map[node.text] = node.text_type
         self.assertEqual("This is a " in type_map, True)
@@ -90,7 +90,7 @@ class TestUtilities(unittest.TestCase):
         # print(f"code test: {text_nodes[3:4]}")
         new_nodes = split_nodes_delimiter(text_nodes[3:4], "`", TextType.CODE)
         # print("resulting nodes: ", new_nodes)
-        type_map: dict = {}
+        type_map = {}
         for node in new_nodes:
             type_map[node.text] = node.text_type
         self.assertEqual(len(new_nodes), 2)
@@ -98,6 +98,86 @@ class TestUtilities(unittest.TestCase):
         self.assertEqual(type_map["This is text node has a "], TextType.TEXT)
         self.assertEqual("code block" in type_map, True)
         self.assertEqual(type_map["code block"], TextType.CODE)
+
+    def test_extract_markdown_images(self):
+        matches = extract_markdown_images(
+            "This is text with an ![image](https://i.imgur.com/zjjcJKZ.png)"
+        )
+        self.assertListEqual([("image", "https://i.imgur.com/zjjcJKZ.png")], matches)
+
+        # Test with empty string
+        self.assertListEqual(extract_markdown_images(""), [])
+
+        # Test with text but no images
+        self.assertListEqual(extract_markdown_images("This is plain text."), [])
+
+        # Test with multiple images
+        text_multiple = "![alt1](url1.png) some text ![alt2](url2.jpg) ![alt3](url3.gif)"
+        expected_multiple = [("alt1", "url1.png"), ("alt2", "url2.jpg"), ("alt3", "url3.gif")]
+        res_multiple = extract_markdown_images(text_multiple)
+        self.assertEqual(res_multiple[0], expected_multiple[0])
+        self.assertEqual(res_multiple[1], expected_multiple[1])
+        self.assertEqual(res_multiple[2], expected_multiple[2])
+
+        # Test image at the beginning
+        text_beginning = "![start](start.png) and some text"
+        expected_beginning = [("start", "start.png")]
+        self.assertListEqual(extract_markdown_images(text_beginning), expected_beginning)
+
+        # Test image at the end
+        text_end = "Some text and ![end](end.png)"
+        expected_end = [("end", "end.png")]
+        self.assertListEqual(extract_markdown_images(text_end), expected_end)
+
+        # Test with empty alt text
+        self.assertListEqual(extract_markdown_images("![](empty_alt.png)"), [("", "empty_alt.png")])
+
+        # Test with empty URL
+        self.assertListEqual(extract_markdown_images("![alt_empty_url]()"), [("alt_empty_url", "")])
+
+        # Test with alt text containing special characters (including brackets)
+        text_special_alt = "![alt [with] !@#$*()](special_alt.svg)"
+        expected_special_alt = [("alt [with] !@#$*()", "special_alt.svg")]
+        self.assertListEqual(extract_markdown_images(text_special_alt), expected_special_alt)
+
+        '''# Test with URL containing special characters (including parentheses)
+        text_special_url = "![special_url_alt](https://example.com/path?query=value(1)&another=param#fragment)"
+        expected_special_url = [("special_url_alt", "https://example.com/path?query=value(1)&another=param#fragment")]
+        self.assertListEqual(extract_markdown_images(text_special_url), expected_special_url)'''
+
+        # Test with no space between closing bracket and opening parenthesis
+        self.assertListEqual(extract_markdown_images("![no_space](no_space.bmp)"), [("no_space", "no_space.bmp")])
+        
+        # Test malformed markdown (should not match)
+        self.assertListEqual(extract_markdown_images("![alt(malformed.png"), []) # Missing ]
+        self.assertListEqual(extract_markdown_images("![alt](malformed.png"), []) # Missing closing )
+        self.assertListEqual(extract_markdown_images("!alt](malformed.png)"), [])  # Missing [
+        self.assertListEqual(extract_markdown_images("[alt](not_an_image.png)"), []) # Missing !, this is a link
+
+
+
+
+
+        # Test mixed valid and invalid
+        '''text_mixed = "Valid: ![img1](url1.png). Invalid: ![img2(url2.png. Valid again: ![img3](url3.png)"
+        expected_mixed = [("img1", "url1.png"), ("img3", "url3.png")]
+        self.assertListEqual(extract_markdown_images(text_mixed), expected_mixed)'''
+
+
+    def test_extract_markdown_links(self):
+        matches = extract_markdown_links(
+            "This is text with a [link](https://i.imgur.com/zjjcJKZ.png)"
+        )
+        self.assertListEqual([("link", "https://i.imgur.com/zjjcJKZ.png")], matches)
+
+        matches = extract_markdown_links("This is text with an ![image](https://i.imgur.com/zjjcJKZ.png)")
+        self.assertListEqual([], matches)
+
+        # Invalid space between braces
+        matches = extract_markdown_links("This is text with an [link] (https://i.imgur.com/zjjcJKZ.png)")
+        self.assertListEqual([], matches)
+
+
         
 
 
