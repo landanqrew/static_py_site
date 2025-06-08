@@ -1,5 +1,5 @@
 import unittest
-from htmlnode import HtmlNode, LeafNode
+from htmlnode import HtmlNode, LeafNode, ParentNode
 
 
 class HtmlNodeTest(unittest.TestCase):
@@ -46,6 +46,20 @@ class HtmlNodeTest(unittest.TestCase):
         # Tests that LeafNode constructor raises ValueError if value is None.
         with self.assertRaisesRegex(ValueError, "cannot instantiate leaf node without value"):
             LeafNode(value=None, tag="p")
+
+    def test_to_html_with_children(self):
+        child_node = LeafNode("span", "child")
+        parent_node = ParentNode("div", [child_node])
+        self.assertEqual(parent_node.to_html(), "<div><span>child</span></div>")
+
+    def test_to_html_with_grandchildren(self):
+        grandchild_node = LeafNode("b", "grandchild")
+        child_node = ParentNode("span", [grandchild_node])
+        parent_node = ParentNode("div", [child_node])
+        self.assertEqual(
+            parent_node.to_html(),
+            "<div><span><b>grandchild</b></span></div>",
+        )
 
 
 if __name__ == '__main__':

@@ -1,4 +1,6 @@
 from textnode import TextNode, TextType
+from htmlnode import HtmlNode, LeafNode, ParentNode
+
 
 def main():
     txt_node = TextNode("This is some anchor text", "link", "https://www.boot.dev")

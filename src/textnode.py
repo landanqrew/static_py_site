@@ -23,3 +23,22 @@ class TextNode:
 
     def __repr__(self):
         return f"TextNode({repr(self.text)}, {repr(self.text_type)}, {repr(self.url)})"
+    
+    def to_html_string(self, pretty=False):
+        match self.text_type:
+            case TextType.TEXT:
+                return self.text
+            case TextType.BOLD:
+                return f"<b>{self.text}</b>"
+            case TextType.ITALIC:
+                return f"<i>{self.text}</i>"
+            case TextType.CODE:
+                return f"<code>{self.text}</code>"
+            case TextType.LINK:
+                return f"<a href=\"{self.url}\">{self.text}</a>"
+            case TextType.IMAGE:
+                return f"<img src=\"{self.url}\" alt=\"{self.text}\">"
+            case _:
+                raise Exception("Invalid text type")
+
+            
