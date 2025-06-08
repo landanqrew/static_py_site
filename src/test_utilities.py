@@ -1,5 +1,6 @@
 import unittest
-from utilities import text_node_to_html_node
+import json
+from utilities import text_node_to_html_node, split_nodes_delimiter
 from htmlnode import HtmlNode, ParentNode, LeafNode
 from textnode import TextNode, TextType
 
@@ -48,5 +49,61 @@ class TestUtilities(unittest.TestCase):
         self.assertEqual(html_node.tag, "img")
         self.assertEqual(html_node.value, "")
         self.assertEqual(html_node.props, {"src": "https://www.google.com", "alt": "This is a link text node"})
+
+    def test_split_nodes_delimiter(self):
+        text_nodes = [
+            TextNode("This is a plain text node", TextType.TEXT),
+            TextNode("This is a *bold* text node", TextType.TEXT),
+            TextNode("This is a _italic_ text node", TextType.TEXT),
+            TextNode("This is text node has a `code block`", TextType.TEXT),
+        ]
+        
+        ### BOLD ###
+        # print(f"bold tests: {text_nodes[1:2]}")
+        new_nodes = split_nodes_delimiter(text_nodes[1:2], "*", TextType.BOLD)
+        # print("resulting nodes: ", new_nodes)
+        type_map: dict = {}
+        # print("type map:")
+        for node in new_nodes:
+            # print(f"{node.text}: {node.text_type}")
+            type_map[node.text] = node.text_type
+        self.assertEqual("This is a " in type_map, True)
+        self.assertEqual(type_map["This is a "], TextType.TEXT)
+        self.assertEqual("bold" in type_map, True)
+        self.assertEqual(type_map["bold"], TextType.BOLD)
+        self.assertEqual(" text node" in type_map, True)
+        self.assertEqual(type_map[" text node"], TextType.TEXT)
+
+        ### ITALICS ###
+        new_nodes = split_nodes_delimiter(text_nodes[2:3], "_", TextType.ITALIC)
+        type_map: dict = {}
+        for node in new_nodes:
+            type_map[node.text] = node.text_type
+        self.assertEqual("This is a " in type_map, True)
+        self.assertEqual(type_map["This is a "], TextType.TEXT)
+        self.assertEqual("italic" in type_map, True)
+        self.assertEqual(type_map["italic"], TextType.ITALIC)
+        self.assertEqual(" text node" in type_map, True)
+        self.assertEqual(type_map[" text node"], TextType.TEXT)
+
+        ### CODE ###
+        # print(f"code test: {text_nodes[3:4]}")
+        new_nodes = split_nodes_delimiter(text_nodes[3:4], "`", TextType.CODE)
+        # print("resulting nodes: ", new_nodes)
+        type_map: dict = {}
+        for node in new_nodes:
+            type_map[node.text] = node.text_type
+        self.assertEqual(len(new_nodes), 2)
+        self.assertEqual("This is text node has a " in type_map, True)
+        self.assertEqual(type_map["This is text node has a "], TextType.TEXT)
+        self.assertEqual("code block" in type_map, True)
+        self.assertEqual(type_map["code block"], TextType.CODE)
+        
+
+
+
+
+
+        
 
         
