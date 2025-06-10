@@ -96,12 +96,12 @@ def split_nodes_code(old_nodes: list[TextNode]) -> list[TextNode]:
 
 def split_nodes_decorator(func):
     def wrapper(old_nodes: list[TextNode]):
-        print(f"function_name:")
-        print(func.__name__)
+        # print(f"function_name:")
+        # print(func.__name__)
         return func(old_nodes)
     return wrapper
 
-def text_to_textnodes(text: str):
+def text_to_textnodes(text: str) -> list[TextNode]:
     nodes = [TextNode(text, TextType.TEXT)]
     new_nodes = nodes.copy()
     map = {
@@ -113,47 +113,47 @@ def text_to_textnodes(text: str):
     }
     for k, v in map.items():
         type: TextType = k
-        func = v
+        new_nodes = v(new_nodes)
+        # func = v
         # new_nodes = split_nodes_decorator(v)(new_nodes)
-        new_nodes = func(new_nodes)
         # print(f"type: {type}")
         # print("new_nodes:", new_nodes)
 
     return new_nodes
 
+def markdown_to_blocks(markdown: str) -> list[str]:
+    uncleaned_blocks: list[str] = markdown.split("\n\n")
+    blocks = []
+    for block in uncleaned_blocks:
+        cleaned_block = clean_block(block)
+        if cleaned_block:
+            blocks.append(cleaned_block)
 
+    return blocks
 
+    
+def clean_block(block: str) -> str:
+    # print("block:", block)
+    stripped_block = block.strip()
+    while stripped_block and stripped_block[0] in ["\n", " "]:
+        stripped_block = stripped_block[1:]
+
+    while stripped_block and stripped_block[-1] in ["\n", " "]:
+        stripped_block = stripped_block[:-1]
+
+    return stripped_block
+        
 
     
 
 
 if __name__ == "__main__":
-    text: str = "This is **text** with an _italic_ word and a `code block` and an ![obi wan image](https://i.imgur.com/fJRm4Vk.jpeg) and a [link](https://boot.dev)"
-    # res: list[TextNode] = split_nodes_bold([TextNode(text, TextType.TEXT)])
-    """node = TextNode(' with an _italic_ word and a `code block` and an ', TextType.TEXT, None)
-    res = split_nodes_italics([node])
-    res = split_nodes_code(res)
-    print(res)"""
-    '''
-    [TextNode(' with an ', <TextType.TEXT: 'text'>, None), 
-    TextNode('italic', <TextType.ITALIC: 'italic'>, None), 
-    TextNode(' word and a ', <TextType.TEXT: 'text'>, None), 
-    TextNode('code block', <TextType.CODE: 'code'>, None), 
-    TextNode(' and an ', <TextType.TEXT: 'text'>, None)]
-    '''
-    res: list[TextNode] = text_to_textnodes(text)
-    print(res)
-    '''
-    [
-    TextNode('This is ', <TextType.TEXT: 'text'>, None), 
-    TextNode('text', <TextType.BOLD: 'bold'>, None), 
-    TextNode(' with an ', <TextType.TEXT: 'text'>, None), 
-    TextNode('italic', <TextType.ITALIC: 'italic'>, None), 
-    TextNode(' word and a ', <TextType.TEXT: 'text'>, None), 
-    TextNode('code block', <TextType.CODE: 'code'>, None), 
-    TextNode(' and an ', <TextType.TEXT: 'text'>, None), 
-    TextNode('obi wan image', <TextType.IMAGE: 'image'>, 'https://i.imgur.com/fJRm4Vk.jpeg'), 
-    TextNode(' and a ', <TextType.TEXT: 'text'>, None), 
-    TextNode('link', <TextType.LINK: 'link'>, 'https://boot.dev')
-    ]
-    '''
+    text: str = """# This is a heading
+
+This is a paragraph of text. It has some **bold** and _italic_ words inside of it.
+
+- This is the first list item in a list block
+- This is a list item
+- This is another list item"""
+
+    print(markdown_to_blocks(text))
