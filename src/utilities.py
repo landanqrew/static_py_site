@@ -40,9 +40,6 @@ def extract_markdown_images(text: str) -> list[tuple[str, str]]:
     if not text:
         return []
     
-    '''matches: list[re.Match[str]] = re.findall(r"!\[(.*?)\]\((.*?)\)", text)
-    if not matches:
-        return []'''
     return [(alt, url) for alt, url in re.findall(r"!\[(.*?)\]\((.*?)\)", text)]
 
 def extract_markdown_links(text: str) -> list[tuple[str, str]]:
@@ -50,10 +47,49 @@ def extract_markdown_links(text: str) -> list[tuple[str, str]]:
         return []
     return [(alt, url) for alt, url in re.findall(r"(?<!!)\[([^\[\]]*)\]\(([^\(\)]*)\)", text)]
 
+def split_nodes_by_pattern(old_nodes: list[TextNode], pattern: str, node_type: TextType):
+    new_nodes = []
+    for node in old_nodes:
+        matches: list[dict] = [{"start": m.start(), "end": m.end(), "groups": m.groups()} for m in re.finditer(pattern, node.text)]
+        if len(matches) == 0:
+            new_nodes.append(node)
+        else:
+            cur_loc = 0
+            for i, match in enumerate(matches):
+                (alt, url) = match["groups"]
+                if match["start"] > cur_loc:
+                    new_nodes.append(TextNode(node.text[cur_loc:match["start"]],node.text_type, node.url))
+                    new_nodes.append(TextNode(alt, node_type, url))
+                else:
+                    new_nodes.append(TextNode(alt, node_type, url))
+                
+                cur_loc = match["end"]
+
+            if cur_loc != len(node.text):
+                new_nodes.append(TextNode(node.text[cur_loc:],node.text_type, node.url))
+
+    return new_nodes
+
+
+                    
+def split_nodes_image(old_nodes: list[TextNode]):
+    return split_nodes_by_pattern(old_nodes, r"!\[(.*?)\]\((.*?)\)", TextType.IMAGE)
+
+
+def split_nodes_link(old_nodes):
+    return split_nodes_by_pattern(old_nodes, r"(?<!!)\[([^\[\]]*)\]\(([^\(\)]*)\)", TextType.LINK)
+
+def text_to_textnodes(text: str):
+    pass
+
+    
+
 
 if __name__ == "__main__":
-    res = extract_markdown_images("![alt1](url1.png) some text ![alt2](url2.jpg) ![alt3](url3.gif)")
-    expected = [("alt1", "url1.png"), ("alt2", "url2.jpg"), ("alt3", "url3.gif")]
-    print(f"res: {res}")
-    print(f"expected: {expected}")
-    print(res == expected)
+    text: str = "[alt1](url1.png) some text ![alt2](url2.jpg) ![alt3](url3.gif)"
+    output = split_nodes_link([TextNode(text, TextType.TEXT)])
+    print(output)
+    text_single = "[url1](url1.png)"
+    text_node = TextNode(text_single, TextType.TEXT, None)
+    result = split_nodes_link([text_node])
+    print(result)

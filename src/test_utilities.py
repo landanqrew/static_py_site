@@ -1,6 +1,6 @@
 import unittest
 import json
-from utilities import text_node_to_html_node, split_nodes_delimiter, extract_markdown_images, extract_markdown_links
+from utilities import *
 from htmlnode import HtmlNode, ParentNode, LeafNode
 from textnode import TextNode, TextType
 
@@ -155,14 +155,67 @@ class TestUtilities(unittest.TestCase):
         self.assertListEqual(extract_markdown_images("[alt](not_an_image.png)"), []) # Missing !, this is a link
 
 
+    def test_split_image_nodes(self):
+        self.maxDiff = None
+        text_multiple = "![alt1](url1.png) some text ![alt2](url2.jpg) ![alt3](url3.gif)"
+        text_node = TextNode(text_multiple, TextType.TEXT, None)
+        compare_list: list[TextNode] = [
+            TextNode("alt1", TextType.IMAGE, "url1.png"),
+            TextNode(" some text ", TextType.TEXT),
+            TextNode("alt2", TextType.IMAGE, "url2.jpg"),
+            TextNode(" ", TextType.TEXT),
+            TextNode("alt3", TextType.IMAGE, "url3.gif")
+        ]
+        result: list[TextNode] = split_nodes_image([text_node])
+        # print(result)
+        self.assertListEqual(result, compare_list)
+
+        # test links
+        text_multiple = "[url1](url1.png) some text [url2](url2.jpg) [alt3](url3.gif)"
+        text_node = TextNode(text_multiple, TextType.TEXT, None)
+        self.assertListEqual(split_nodes_image([text_node]), [text_node])
+
+        text_single = "![image](url1.png)"
+        text_node = TextNode(text_single, TextType.TEXT, None)
+        result_node = TextNode("image", TextType.IMAGE, "url1.png")
+        func_res = split_nodes_image([text_node])
+        # print(func_res)
+        self.assertListEqual(func_res, [result_node])
+
+    def test_split_link_nodes(self):
+        self.maxDiff = None
+        text_multiple = "[url1](url1.png) some text [url2](url2.jpg) [alt3](url3.gif)"
+        text_node = TextNode(text_multiple, TextType.TEXT, None)
+        compare_list: list[TextNode] = [
+            TextNode("url1", TextType.LINK, "url1.png"),
+            TextNode(" some text ", TextType.TEXT),
+            TextNode("url2", TextType.LINK, "url2.jpg"),
+            TextNode(" ", TextType.TEXT),
+            TextNode("alt3", TextType.LINK, "url3.gif")
+        ]
+        result: list[TextNode] = split_nodes_link([text_node])
+        #print(result)
+        self.assertListEqual(result, compare_list)
+
+        # test images
+        text_multiple = "![alt1](url1.png) some text ![alt2](url2.jpg) ![alt3](url3.gif)"
+        text_node = TextNode(text_multiple, TextType.TEXT, None)
+        self.assertListEqual(split_nodes_link([text_node]), [text_node])
+
+        # single link
+        text_single = "[url1](url1.png)"
+        text_node = TextNode(text_single, TextType.TEXT, None)
+        result_node = TextNode("url1", TextType.LINK, "url1.png")
+        func_res = split_nodes_link([text_node])
+        # print(func_res)
+        self.assertListEqual(func_res, [result_node])
+
+
+        
 
 
 
-        # Test mixed valid and invalid
-        '''text_mixed = "Valid: ![img1](url1.png). Invalid: ![img2(url2.png. Valid again: ![img3](url3.png)"
-        expected_mixed = [("img1", "url1.png"), ("img3", "url3.png")]
-        self.assertListEqual(extract_markdown_images(text_mixed), expected_mixed)'''
-
+        
 
     def test_extract_markdown_links(self):
         matches = extract_markdown_links(
