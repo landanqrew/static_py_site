@@ -51,17 +51,24 @@ def split_nodes_by_pattern(old_nodes: list[TextNode], pattern: str, node_type: T
     new_nodes = []
     for node in old_nodes:
         matches: list[dict] = [{"start": m.start(), "end": m.end(), "groups": m.groups()} for m in re.finditer(pattern, node.text)]
-        if len(matches) == 0:
+        if len(matches) == 0 or node.text_type != TextType.TEXT:
             new_nodes.append(node)
         else:
             cur_loc = 0
             for i, match in enumerate(matches):
-                (alt, url) = match["groups"]
-                if match["start"] > cur_loc:
-                    new_nodes.append(TextNode(node.text[cur_loc:match["start"]],node.text_type, node.url))
-                    new_nodes.append(TextNode(alt, node_type, url))
+                if len(match["groups"]) > 1:
+                    (alt, url) = match["groups"]
+                    if match["start"] > cur_loc:
+                        new_nodes.append(TextNode(node.text[cur_loc:match["start"]],node.text_type, node.url))
+                        new_nodes.append(TextNode(alt, node_type, url))
+                    else:
+                        new_nodes.append(TextNode(alt, node_type, url))
                 else:
-                    new_nodes.append(TextNode(alt, node_type, url))
+                    if match["start"] > cur_loc:
+                        new_nodes.append(TextNode(node.text[cur_loc:match["start"]],node.text_type, node.url))
+                        new_nodes.append(TextNode(match["groups"][0], node_type, None))
+                    else:
+                        new_nodes.append(TextNode(match["groups"][0], node_type, None))
                 
                 cur_loc = match["end"]
 
@@ -72,24 +79,81 @@ def split_nodes_by_pattern(old_nodes: list[TextNode], pattern: str, node_type: T
 
 
                     
-def split_nodes_image(old_nodes: list[TextNode]):
+def split_nodes_image(old_nodes: list[TextNode]) -> list[TextNode]:
     return split_nodes_by_pattern(old_nodes, r"!\[(.*?)\]\((.*?)\)", TextType.IMAGE)
 
-
-def split_nodes_link(old_nodes):
+def split_nodes_link(old_nodes: list[TextNode]) -> list[TextNode]:
     return split_nodes_by_pattern(old_nodes, r"(?<!!)\[([^\[\]]*)\]\(([^\(\)]*)\)", TextType.LINK)
 
+def split_nodes_bold(old_nodes: list[TextNode]) -> list[TextNode]:
+    return split_nodes_by_pattern(old_nodes, r"\*\*(.*?)\*\*", TextType.BOLD)
+
+def split_nodes_italics(old_nodes: list[TextNode]) -> list[TextNode]:
+    return split_nodes_by_pattern(old_nodes, r"\_(.*?)\_", TextType.ITALIC)
+
+def split_nodes_code(old_nodes: list[TextNode]) -> list[TextNode]:
+    return split_nodes_by_pattern(old_nodes, r"\`(.*?)\`", TextType.CODE)
+
+def split_nodes_decorator(func):
+    def wrapper(old_nodes: list[TextNode]):
+        print(f"function_name:")
+        print(func.__name__)
+        return func(old_nodes)
+    return wrapper
+
 def text_to_textnodes(text: str):
-    pass
+    nodes = [TextNode(text, TextType.TEXT)]
+    new_nodes = nodes.copy()
+    map = {
+        TextType.IMAGE: split_nodes_image,
+        TextType.LINK: split_nodes_link,
+        TextType.BOLD: split_nodes_bold,
+        TextType.ITALIC: split_nodes_italics,
+        TextType.CODE: split_nodes_code,
+    }
+    for k, v in map.items():
+        type: TextType = k
+        func = v
+        # new_nodes = split_nodes_decorator(v)(new_nodes)
+        new_nodes = func(new_nodes)
+        # print(f"type: {type}")
+        # print("new_nodes:", new_nodes)
+
+    return new_nodes
+
+
+
 
     
 
 
 if __name__ == "__main__":
-    text: str = "[alt1](url1.png) some text ![alt2](url2.jpg) ![alt3](url3.gif)"
-    output = split_nodes_link([TextNode(text, TextType.TEXT)])
-    print(output)
-    text_single = "[url1](url1.png)"
-    text_node = TextNode(text_single, TextType.TEXT, None)
-    result = split_nodes_link([text_node])
-    print(result)
+    text: str = "This is **text** with an _italic_ word and a `code block` and an ![obi wan image](https://i.imgur.com/fJRm4Vk.jpeg) and a [link](https://boot.dev)"
+    # res: list[TextNode] = split_nodes_bold([TextNode(text, TextType.TEXT)])
+    """node = TextNode(' with an _italic_ word and a `code block` and an ', TextType.TEXT, None)
+    res = split_nodes_italics([node])
+    res = split_nodes_code(res)
+    print(res)"""
+    '''
+    [TextNode(' with an ', <TextType.TEXT: 'text'>, None), 
+    TextNode('italic', <TextType.ITALIC: 'italic'>, None), 
+    TextNode(' word and a ', <TextType.TEXT: 'text'>, None), 
+    TextNode('code block', <TextType.CODE: 'code'>, None), 
+    TextNode(' and an ', <TextType.TEXT: 'text'>, None)]
+    '''
+    res: list[TextNode] = text_to_textnodes(text)
+    print(res)
+    '''
+    [
+    TextNode('This is ', <TextType.TEXT: 'text'>, None), 
+    TextNode('text', <TextType.BOLD: 'bold'>, None), 
+    TextNode(' with an ', <TextType.TEXT: 'text'>, None), 
+    TextNode('italic', <TextType.ITALIC: 'italic'>, None), 
+    TextNode(' word and a ', <TextType.TEXT: 'text'>, None), 
+    TextNode('code block', <TextType.CODE: 'code'>, None), 
+    TextNode(' and an ', <TextType.TEXT: 'text'>, None), 
+    TextNode('obi wan image', <TextType.IMAGE: 'image'>, 'https://i.imgur.com/fJRm4Vk.jpeg'), 
+    TextNode(' and a ', <TextType.TEXT: 'text'>, None), 
+    TextNode('link', <TextType.LINK: 'link'>, 'https://boot.dev')
+    ]
+    '''
